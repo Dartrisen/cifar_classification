@@ -235,7 +235,8 @@ if __name__ == "__main__":
     print('Finished Training')
 
     # Test which classes performed well
-    test_accuracy()
+    accuracy = test_accuracy()
+    print(accuracy)
 
     # Let's load the model we just created and test the accuracy per label
     model = Network()
