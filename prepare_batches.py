@@ -53,7 +53,7 @@ def save_images(data: str, directory: str) -> None:
 
 
 def main():
-    path = "path/to/data"
+    path = "/Users/dartrisen/Downloads/cifar-10-batches-py/data_batch_1"
     data_batch = unpickle(path)
     output_dir = 'train'
     save_images(data_batch, output_dir)

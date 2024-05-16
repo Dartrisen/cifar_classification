@@ -1,76 +1,20 @@
 import os
-import torch
-import torch.nn as nn
-import torchvision
-import torch.nn.functional as F
-from torch.optim import Adam
-from torch.autograd import Variable
+
 import matplotlib.pyplot as plt
 import numpy as np
-from PIL import Image
-# from torchvision.datasets import CIFAR10
-from torchvision.transforms import transforms
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+import torchvision
+from torch.autograd import Variable
+from torch.optim import Adam
 from torch.utils.data import DataLoader
 
-
-# Master dict for outputs?
-label_dict = {
-    "label_0": 0,
-    "label_1": 1,
-    "label_2": 2,
-}
-
-# Loading and normalizing the data.
-# Define transformations for training and test
-transformations = transforms.Compose([
-    # transforms.Resize((32, 32)),  # Resize images to a consistent size
-    transforms.ToTensor(),  # Convert PIL Image to tensor
-    transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5))  # Normalize images
-])
+from prepare_data import CustomDataset, transformations
+from model import Network
 
 batch_size = 3
 number_of_labels = 3
-
-
-class CustomDataset(torch.utils.data.Dataset):
-    def __init__(self, data_dir, transform=None):
-        self.data_dir = data_dir
-        self.transform = transform
-        # List of image file paths
-        self.images = []
-        self.labels = []
-        for filename in os.listdir(data_dir):
-            # Get the full path of the file
-            file_path = os.path.join(data_dir, filename)
-            print("file_path: ", file_path)
-            # Check if the path is a file (not a directory)
-            if os.path.isdir(file_path):
-                for image_name in os.listdir(file_path):
-                    name_list = image_name.split('__')
-                    image_label = name_list[1].split('.')[0]
-                    print("name list: ", name_list)
-                    print("image label: ", image_label)
-
-                    image_path = os.path.join(data_dir, filename, image_name)
-                    if os.path.isfile(image_path):
-                        # Append the file path to the list
-                        self.images.append(image_path)
-                        self.labels.append(label_dict[image_label])
-                        print("image, label: ", image_path, label_dict[image_label])
-
-    def __len__(self):
-        return len(self.images)
-
-    def __getitem__(self, idx):
-        img_name = os.path.join(self.data_dir, self.images[idx])
-        image = Image.open(img_name)
-        label = self.labels[idx]
-
-        if self.transform:
-            image = self.transform(image)
-
-        return image, label
-
 
 # Create train and test datasets
 train_set = CustomDataset(data_dir=os.getcwd() + r"/train", transform=transformations)
@@ -87,35 +31,8 @@ print("The number of batches per epoch is: ", len(train_loader))
 classes = ('label_0', 'label_1', 'label_2')
 
 
-# Define a convolution neural network
-class Network(nn.Module):
-    def __init__(self):
-        super(Network, self).__init__()
-        self.conv1 = nn.Conv2d(in_channels=3, out_channels=12, kernel_size=5, stride=1, padding=1)
-        self.bn1 = nn.BatchNorm2d(12)
-        self.conv2 = nn.Conv2d(in_channels=12, out_channels=12, kernel_size=5, stride=1, padding=1)
-        self.bn2 = nn.BatchNorm2d(12)
-        self.pool = nn.MaxPool2d(2, 2)
-        self.conv4 = nn.Conv2d(in_channels=12, out_channels=24, kernel_size=5, stride=1, padding=1)
-        self.bn4 = nn.BatchNorm2d(24)
-        self.conv5 = nn.Conv2d(in_channels=24, out_channels=24, kernel_size=5, stride=1, padding=1)
-        self.bn5 = nn.BatchNorm2d(24)
-        self.fc1 = nn.Linear(24 * 10 * 10, 3)  # Adjusting input size to match resized images
-
-    def forward(self, input):
-        output = F.relu(self.bn1(self.conv1(input)))
-        output = F.relu(self.bn2(self.conv2(output)))
-        output = self.pool(output)
-        output = F.relu(self.bn4(self.conv4(output)))
-        output = F.relu(self.bn5(self.conv5(output)))
-        print("output shape: ", output.shape)
-        output = output.view(-1, 24 * 10 * 10)
-        output = self.fc1(output)
-        return output
-
-
 # Instantiate a neural network model
-model = Network()
+model = Network(number_of_labels)
 
 # Define the loss function with Classification Cross-Entropy loss and an optimizer with Adam optimizer
 loss_fn = nn.CrossEntropyLoss()
@@ -154,7 +71,7 @@ def train(num_epochs):
     best_accuracy = 0.0
 
     # Define your execution device
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
+    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu") # mps
     print("The model will be running on", device, "device")
     # Convert model parameters and buffers to CPU or Cuda
     model.to(device)
@@ -168,7 +85,7 @@ def train(num_epochs):
             images = Variable(images)
             # Convert labels to tensor before applying .to(device)
             labels = Variable(labels)
-            print("label size: ", labels.shape)
+            # print("label size: ", labels.shape)
             # labels = Variable(labels.to(device))
 
             # zero the parameter gradients
@@ -231,7 +148,7 @@ def test_batch():
 
 if __name__ == "__main__":
     # Let's build our model
-    train(5)
+    train(50)
     print('Finished Training')
 
     # Test which classes performed well
@@ -239,7 +156,7 @@ if __name__ == "__main__":
     print(accuracy)
 
     # Let's load the model we just created and test the accuracy per label
-    model = Network()
+    model = Network(number_of_labels)
     path = "myFirstModel.pth"
     model.load_state_dict(torch.load(path))
 
