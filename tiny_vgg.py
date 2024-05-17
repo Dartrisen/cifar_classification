@@ -68,3 +68,36 @@ class TinyVGG(nn.Module):
 
 model = TinyVGG(input_shape=3, hidden_shape=10, output_shape=3)
 print(model(torch.randn(1, 3, 32, 32)))
+
+
+def train_step(
+        model: torch.nn.Module,
+        dataloader: torch.utils.data.DataLoader,
+        loss_fn: torch.nn.Module,
+        optimizer: torch.optim.Optimizer,
+        device: torch.device
+):
+    model.train()
+
+    train_loss, train_acc = 0, 0
+
+    for batch, (x, y) in enumerate(dataloader):
+        x, y = x.to(device, non_blocking=True), y.to(device, non_blocking=True)
+
+        y_pred = model(x)
+
+        loss = loss_fn(y_pred, y)
+        train_loss += loss.item()
+
+        optimizer.zero_grad()
+
+        loss.backward()
+
+        optimizer.step()
+
+        y_pred_class = torch.argmax(torch.softmax(y_pred, dim=1), dim=1)
+        train_acc += (y_pred_class == y).sum().item() / len(y_pred)
+
+    train_loss = train_loss / len(dataloader)
+    train_acc = train_acc / len(dataloader)
+    return train_loss, train_acc
