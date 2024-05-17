@@ -118,7 +118,7 @@ if __name__ == "__main__":
     device = torch.device("mps" if torch.backends.mps.is_available() else "cpu")
     model.to(device)
 
-    train(1000)
+    train(10)
     print('Finished Training')
 
     accuracy = test_accuracy()
